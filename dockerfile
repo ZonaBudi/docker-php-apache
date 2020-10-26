@@ -2,41 +2,62 @@ FROM php:7.4-apache
 
 LABEL maintaner="zona.budi11@gmail.com"
 
+ENV COMPOSER_HOME=/usr/local/composer \
+    PATH=/usr/local/composer/vendor/bin:$PATH COMPOSER_ALLOW_SUPERUSER=1
+
 ADD https://raw.githubusercontent.com/mlocati/docker-php-extension-installer/master/install-php-extensions /usr/local/bin/
 
 RUN chmod uga+x /usr/local/bin/install-php-extensions && sync
 
-RUN DEBIAN_FRONTEND=noninteractive apt-get update -q \
-    && DEBIAN_FRONTEND=noninteractive apt-get install -qq -y \
-      curl \
-      git \
-      zip unzip \
-    && install-php-extensions \
-      bcmath \
-      bz2 \
-      calendar \
-      exif \
-      gd \
-      intl \
-      ldap \
-      memcached \
-      mysqli \
-      opcache \
-      pdo_mysql \
-      pdo_pgsql \
-      pgsql \
-      redis \
-      soap \
-      xsl \
-      zip \
-      sockets \
-      pdo_sqlsrv \
-      sqlsrv \
-      rdkafka \ 
+COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+RUN DEBIAN_FRONTEND=noninteractive \
+    apt-get -y --force-yes update && \
+    apt-get -y --force-yes --no-install-recommends install \
+    supervisor \
+    cron \
+# Composer dependencies:
+    openssl \
+    zip \
+    unzip \
+    curl \
+    wget \
+    git \
+    mercurial \
+    subversion \
+# Composer
+    && curl -sS https://getcomposer.org/installer | php \
+    && mv composer.phar /usr/local/bin/composer \
+    && chmod 755 /usr/local/bin/composer \
+    && chown www-data:www-data $COMPOSER_HOME \
+    && chown www-data:www-data $COMPOSER_HOME -R \
+    && chmod 775 $COMPOSER_HOME \
+    && chmod 775 $COMPOSER_HOME -R \
+# Cleanup
+    && rm -rf /var/lib/apt/lists/*
+
+RUN install-php-extensions \
+    bcmath \
+    bz2 \
+    calendar \
+    exif \
+    gd \
+    intl \
+    ldap \
+    memcached \
+    mysqli \
+    opcache \
+    pdo_mysql \
+    pdo_pgsql \
+    pgsql \
+    redis \
+    soap \
+    xsl \
+    zip \
+    sockets \
+    pdo_sqlsrv \
+    sqlsrv \
+    rdkafka \ 
     && a2enmod rewrite
 
-RUN apt autoremove
-
-RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && ln -s $(composer config --global home) /root/composer
-ENV PATH=$PATH:/root/composer/vendor/bin COMPOSER_ALLOW_SUPERUSER=1
+CMD ["supervisord", "-c", "/etc/supervisor/supervisord.conf"]
