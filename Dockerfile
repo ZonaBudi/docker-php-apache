@@ -10,6 +10,7 @@ ADD https://raw.githubusercontent.com/mlocati/docker-php-extension-installer/mas
 RUN chmod uga+x /usr/local/bin/install-php-extensions && sync
 
 COPY ./supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY ./000-default.conf /etc/apache2/sites-available/000-default.conf
 
 RUN DEBIAN_FRONTEND=noninteractive \
     apt-get -y --force-yes update && \
